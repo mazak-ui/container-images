@@ -103,13 +103,12 @@ jobs:
       with:
         platforms: amd64,arm64
 
-    - name: Login to GHCR
+
+    - name: Login to DockerHub
       uses: docker/login-action@v1
-      if: github.event_name != 'pull_request'
       with:
-        registry: ghcr.io
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
 
     # Install and configure Buildx
     - name: Set up Docker Buildx
@@ -120,42 +119,6 @@ jobs:
         version: latest
         driver-opts: image=moby/buildkit:latest
 
-    - name: Cache Docker layers
-      uses: actions/cache@v2
-      with:
-        path: /tmp/.buildx-cache
-        key: ${{ secrets.DOCKER_REGISTRY }}/${{ github.repository_owner }}/${{ matrix.container }}
-        restore-keys: |
-          ${{ secrets.DOCKER_REGISTRY }}/${{ github.repository_owner }}/${{ matrix.container }}
-
-    # Install the GOSS testing framework
-    - name: Set up goss/dgoss
-      uses: e1himself/goss-installation-action@v1.0.4
-      if: ${{ steps.prep.outputs.goss == 'true' }}
-      with:
-        version: 'v0.3.16'
-
-    # Creates a local build to run tests on
-    - name: Build and Load local test-container
-      if: ${{ steps.prep.outputs.goss == 'true' }}
-      uses: docker/build-push-action@v2
-      with:
-        build-args: VERSION=${{ steps.prep.outputs.version }}
-        context: .
-        file: ./${{ steps.prep.outputs.category }}/${{ matrix.container }}/Dockerfile
-        load: true
-        tags: |
-          ghcr.io/${{ github.repository_owner }}/${{ matrix.container }}:test
-        cache-from: ${{ steps.prep.outputs.cache_from }}
-        cache-to: ${{ steps.prep.outputs.cache_to }}
-
-    # Run GOSS tests if included with the container
-    - name: Run GOSS tests
-      if: ${{ steps.prep.outputs.goss == 'true' }}
-      env:
-        GOSS_FILE: ./${{ steps.prep.outputs.category }}/${{ matrix.container }}/goss.yaml
-      run: |
-        dgoss run ghcr.io/${{ github.repository_owner }}/${{ matrix.container }}:test
 
     # Push if not a PR, otherwise just test the build process for all requested platforms
     - name: Build and Push
@@ -167,7 +130,7 @@ jobs:
         file: ./${{ steps.prep.outputs.category }}/${{ matrix.container }}/Dockerfile
         push: ${{ steps.prep.outputs.push }}
         tags: |
-          ghcr.io/${{ github.repository_owner }}/${{ matrix.container }}:latest
-          ghcr.io/${{ github.repository_owner }}/${{ matrix.container }}:v${{ steps.prep.outputs.version }}
+          oskardudycz/eventsourcing.nodejs.simple:latest 
+          ghcr.io/oskardudycz/eventsourcing.nodejs/simple:latest
         cache-from: ${{ steps.prep.outputs.cache_from }}
         cache-to: ${{ steps.prep.outputs.cache_to }}
